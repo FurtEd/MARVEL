@@ -24,10 +24,10 @@ If you modify or move files within the extracted package, the application might 
 ## 🔔 Stay Updated
 
 We regularly release updates, performance improvements, and bug fixes. 
-* To get notified whenever a new version is available, click the **Watch** button in the top right corner of this repository, select **Custom**, and check **Releases**.
+To get notified whenever a new version is available, click the **Watch** button in the top right corner of this repository, select **Custom**, and check **Releases**.
 
 ---
 ## 💬 Support & Feedback
 
 If you encounter any issues, have questions, or want to suggest a new feature:
-* Please navigate to the **Issues** tab at the top of this page and open a new ticket. Describe your problem in detail, and our team will get back to you.
+Please navigate to the **Issues** tab at the top of this page and open a new ticket. Describe your problem in detail, and our team will get back to you.

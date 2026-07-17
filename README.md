@@ -1,6 +1,6 @@
-# MARVEL Offline Calculator (v4.1)
+# MARVEL Offline (v4.1)
 
-MARVEL is a specialized calculation tool compiled into WebAssembly (WASM) for high-performance execution. This repository contains the fully offline-capable web application, allowing users to run MARVEL calculations directly in their browser without any internet connection, local server, or installation.
+This repository contains the fully offline-capable web application of MARVEL, allowing users to run MARVEL calculations directly in their browser without any internet connection, local server, or installation.
 
 ---
 ## 🚀 How to Download and Run

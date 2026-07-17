@@ -1,19 +1,33 @@
-# pyMARVEL – Graphical User Interface for the MARVEL Algorithm
+# MARVEL Offline Calculator (v4.1)
 
-Welcome to **pyMARVEL**, a modern, web-based graphical user interface designed to process molecular spectroscopy transitions and execute the MARVEL (Measured Active Rotational-Vibrational Energy Levels) algorithm. 
-
-This application is fully containerized using Docker, meaning users do not need to install Python, compiler toolchains, or any external libraries. Everything runs locally inside an isolated environment with a single click.
+MARVEL is a specialized calculation tool compiled into WebAssembly (WASM) for high-performance execution. This repository contains the fully offline-capable web application, allowing users to run MARVEL calculations directly in their browser without any internet connection, local server, or installation.
 
 ---
+## 🚀 How to Download and Run
 
-## 🚀 How to Use (For Testers)
+To use the application, you do not need to download the source code. Simply download the pre-packaged, ready-to-run release:
 
-To make testing as seamless as possible, the project is divided into platform-specific packages. Please navigate to the folder corresponding to your operating system and follow the quick guide inside:
-
-* **Windows Users:** Go to the `windows/` folder and double-click `run.bat`.
-* **macOS Users:** Go to the `macos/` folder and double-click `run.command` (after a quick one-time permission setup).
-* **Linux Users:** Go to the `linux/` folder and execute the `run.sh` script via Terminal.
-
-Each folder contains its own dedicated, simplified `README.md` with prerequisites (Docker setup) and usage instructions.
+1. Go to the **Releases** tab on the right side (or top) of this page.
+2. Download the latest `MARVEL4.1_offline.zip` package.
+3. **Extract (unzip)** the downloaded file to a folder on your computer. *(Do not run it directly from inside the ZIP!)*
+4. Open the extracted folder and double-click **`index.html`** to launch the application in your web browser.
 
 ---
+## ⚠️ Important Rules for Offline Use
+
+If you modify or move files within the extracted package, the application might stop working. Please keep the following in mind:
+* **Do not change the folder structure.** The `index.html` file must remain in the same folder next to the `build`, `css`, and `js` directories.
+* **Do not move `index.html`** out of its original location.
+* **Do not rename** any files or folders in the package.
+---
+
+## 🔔 Stay Updated
+
+We regularly release updates, performance improvements, and bug fixes. 
+* To get notified whenever a new version is available, click the **Watch** button in the top right corner of this repository, select **Custom**, and check **Releases**.
+
+---
+## 💬 Support & Feedback
+
+If you encounter any issues, have questions, or want to suggest a new feature:
+* Please navigate to the **Issues** tab at the top of this page and open a new ticket. Describe your problem in detail, and our team will get back to you.

@@ -1,4 +1,4 @@
-# MARVEL Offline (v4.1)
+# MARVEL Offline (v4.5)
 
 This repository contains the fully offline-capable web application of MARVEL, allowing users to run MARVEL calculations directly in their browser without any internet connection, local server, or installation.
 
@@ -8,7 +8,7 @@ This repository contains the fully offline-capable web application of MARVEL, al
 To use the application, you do not need to download the source code. Simply download the pre-packaged, ready-to-run release:
 
 1. Go to the **Releases** tab on the right side (or top) of this page.
-2. Download the latest `MARVEL4.1_offline.zip` package.
+2. Download the latest `MARVEL4.5.zip` package.
 3. **Extract (unzip)** the downloaded file to a folder on your computer. *(Do not run it directly from inside the ZIP!)*
 4. Open the extracted folder and double-click **`index.html`** to launch the application in your web browser.
 

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <title>MARVEL 4.5</title>
+    
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="datatables/css/jquery.dataTables.min.css" rel="stylesheet" type="text/css"/>
+    <link href="datatables/css/jquery.dataTables_themeroller.css" rel="stylesheet" type="text/css"/>
+    <link rel="icon" type="image/png" href="icon.png" />
+    
+    <script src="js/jquery-3.7.1.min.js"></script>
+    <script src="js/bootstrap.bundle.min.js"></script>
+    <script src="datatables/js/jquery.dataTables.min.js"></script>
+    
+    <script src="js/vue.global.js"></script>
+    
+	  <!-- WASM és háttérfolyamat scriptek -->
+    <script src="build/wasm_data.js"></script>
+    <script src="build/marvel.js"></script>
+    <script src="process.js"></script>
+
+
+
+    <style>
+        label { display: block; margin: 10px; }
+        .col { padding: 20px; }
+        .table.dataTable tbody td { font-size: 13px; }
+        table.dataTable tbody th, table.dataTable tbody td { padding: 4px 4px; }
+        .container { width: 90% !important; }
+        
+        /* Style of scrollable black terminal*/
+        .terminal-box {
+            background-color: #1e1e1e; 
+            color: #00ff00; 
+            font-family: 'Courier New', Courier, monospace; 
+            padding: 15px; 
+            border-radius: 5px; 
+            height: 250px; 
+            overflow-y: auto; 
+            margin-bottom: 20px;
+            font-size: 12px;
+            box-shadow: inset 0 0 10px #000;
+        }
+
+        .recalculating-overlay {
+            opacity: 0.55;
+            pointer-events: none;
+            transition: opacity 0.2s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app" class="container">
+        <h1>MARVEL 4.5</h1>
+        <div class="row">
+            
+            <div class="col-sm-4 first-column">
+				<div class="panel panel-primary">
+					<div class="panel-heading" style="display: flex; justify-content: space-between; align-items: center;">
+						<span>Inputs</span>
+						<button type="button" class="btn btn-xs btn-default" onclick="window.location.reload();" style="color: #333; font-weight: normal;">
+							Reload page
+						</button>
+					</div>
+					<div class="panel-body">
+						<form @submit.prevent="runMarvel">
+                            <div style="display: flex; gap: 30px; align-items: center; margin-bottom: 15px;">
+                                
+                                <!-- NQN -->
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <label for="nqn" style="margin: 0; font-weight: bold;">NQN:</label>
+                                    <input type="number" id="nqn" class="form-control" required 
+                                           :disabled="isRunning || hasCalculated" 
+                                           v-model.number="nqn" style="width: 65px; height: 34px; padding: 6px 12px;"/>
+                                </div>
+                                
+                                <!-- UNC -->
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <label for="uncSelect" style="margin: 0; font-weight: bold;">unc:</label>
+                                    <select id="uncSelect" class="form-control" required 
+                                            :disabled="isRunning || hasCalculated" 
+                                            v-model.number="unc" style="width: 65px; height: 34px; padding: 6px 12px;">
+                                        <option value="1">1</option>
+                                        <option value="2">2</option>
+                                    </select>
+                                </div>
+
+                            </div>
+
+                            <!-- minSize -->
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
+                                <label for="minSize" style="margin: 0; font-weight: bold;">minSize:</label>
+                                <input type="number" id="minSize" value="1" disabled class="form-control" style="width: 105px; height: 34px; padding: 6px 12px; background-color: #e9ecef; cursor: not-allowed;">
+                            </div>
+                            
+                            <!-- Bootstrap elemek -->
+                            <label for="bootstrap" style="margin-bottom: 25px;"> 
+                                <input type="checkbox" id="bootstrap" v-model="runBootstrap" :disabled="isRunning"> Run Bootstrap
+                            </label>
+                                                        
+                            <label v-if="runBootstrap" for="botiter" style="margin-bottom: 20px;">
+                                Number of bootstrap iteration: 
+                                <input type="number" id="botiter" class="form-control" required 
+                                       :disabled="isRunning" 
+                                       v-model.number="botiter" style="display: inline-block; width: 100px; height: 30px; padding: 4px 8px; margin-left: 5px;" />
+                            </label>
+                            
+                            <!-- Segment file Browse gomb -->
+                            <div class="form-group" style="margin-bottom: 15px;">
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Segment file:</label>
+                                <div style="display: flex; align-items: center; gap: 10px; margin-left: 25px;">
+                                    <input type="file" id="segmentFile" ref="segFile" :required="!hasCalculated" style="display: none;" @change="$forceUpdate()" />
+                                    <button type="button" class="btn btn-default btn-sm" 
+                                            :disabled="isRunning || hasCalculated" 
+                                            @click="$refs.segFile.click()">Browse...</button>
+                                    <span style="font-size: 13px; color: #666;">
+                                        {{ $refs.segFile && $refs.segFile.files[0] ? $refs.segFile.files[0].name : 'No file chosen' }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Transition file Browse gomb -->
+                            <div class="form-group" style="margin-bottom: 15px;">
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Transition file:</label>
+                                <div style="display: flex; align-items: center; gap: 10px; margin-left: 25px;">
+                                    <input type="file" id="transitionFile" ref="transFile" :required="!hasCalculated" style="display: none;" @change="$forceUpdate()" />
+                                    <button type="button" class="btn btn-default btn-sm" 
+                                            :disabled="isRunning || hasCalculated" 
+                                            @click="$refs.transFile.click()">Browse...</button>
+                                    <span style="font-size: 13px; color: #666;">
+                                        {{ $refs.transFile && $refs.transFile.files[0] ? $refs.transFile.files[0].name : 'No file chosen' }}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <br/>
+
+                            <!-- GOMBOK VÁLTÁSA -->
+                            <button v-if="!hasCalculated" type="submit" class="btn btn-primary btn-lg" :disabled="isRunning" style="margin-left: 65px;">
+                                {{ isRunning ? 'Running MARVEL...' : 'Run MARVEL' }}
+                            </button>
+
+                            <button v-else type="submit" class="btn btn-success btn-lg btn-block" @click="rerunMarvel" :disabled="isRunning" style="margin-left: 0px;">
+                                {{ isRunning ? 'Running MARVEL...' : 'ReRun MARVEL' }}
+                            </button>
+                        </form> 
+                    </div>
+                </div>
+            
+                <!-- Output files panel -->
+				<div class="panel panel-success" v-if="outputFiles.length > 0">
+					<div class="panel-heading">Output files</div>
+					<div class="panel-body">
+						<div v-for="file in outputFiles" :key="file" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+							<strong style="margin-right: 15px; word-break: break-all;">{{ file }}:</strong>
+
+							<div style="white-space: nowrap; flex-shrink: 0;">
+								<button 
+									:class="isDownloaded(file) ? 'btn btn-default btn-xs' : 'btn btn-success btn-xs'" 
+									:style="isDownloaded(file) ? 'background-color: #2d5a27 !important; border-color: #20401c !important; color: #a3cca0;' : ''"
+									@click="triggerDownload(file)">
+									{{ isDownloaded(file) ? 'Downloaded' : 'Download' }}
+								</button>                         
+								<button class="btn btn-info btn-xs" @click="triggerView(file)" style="margin-left: 5px;">View in browser</button>
+							</div>
+						</div>
+						
+						<div id="output" style="display:none;"></div>
+					</div>
+				</div>
+
+            </div>
+            
+            <div class="col-sm-8 second-column">
+                <div class="panel panel-info">
+                    <div class="panel-heading">Logs</div>
+                    <div class="panel-body">
+                        
+                        <!-- Log Konszol -->
+                        <div id="logConsole" style="background-color: #1a1a1a; color: #33ff33; font-family: monospace; padding: 15px; height: 200px; overflow-y: scroll; border-radius: 5px; margin-bottom: 20px;">
+                            <div v-for="(log, index) in logs" :key="index" :style="{ color: log.color }">
+                                [{{ log.time }}] [{{ log.type }}]: {{ log.text }}
+                            </div>
+                        </div>
+
+                        <!-- Results Panel Keret -->
+						<div class="panel panel-default" style="margin-bottom: 0;">
+							<div class="panel-heading">
+								<h3 class="panel-title" style="font-weight: bold;">Results</h3>
+							</div>
+							<div class="panel-body">
+
+								<!-- Navigációs Fülek -->
+								<ul class="nav nav-tabs" style="margin-bottom: 15px;">
+									<li :class="{ active: activeTab === 'badLines' }">
+										<a href="#" @click.prevent="activeTab = 'badLines'">Bad Lines</a>
+									</li>
+									<li :class="{ active: activeTab === 'energies' }">
+										<a href="#" @click.prevent="activeTab = 'energies'">Energies</a>
+									</li>
+									<!-- ÚJ FÜL: Components -->
+									<li :class="{ active: activeTab === 'components' }">
+										<a href="#" @click.prevent="activeTab = 'components'">Components</a>
+									</li>
+								</ul>
+
+								<!-- Fülek Tartalma -->
+								<div class="tab-content">
+									
+									<!-- 1. FÜL: Bad Lines -->
+									<div v-show="activeTab === 'badLines'">
+										<!-- Súgó gomb -->
+										<a @click.prevent="showBadHelp = !showBadHelp" href="#" style="text-decoration: none; font-weight: bold; font-size: 13px; color: #337ab7; display: inline-block; margin-bottom: 10px; cursor: pointer;">
+											<span class="glyphicon glyphicon-info-sign"></span> See instructions & details...
+										</a>
+
+										<!-- Lenyíló tartalom -->
+										<div id="badLinesHelp" class="collapse" :class="{ show: showBadHelp }">
+											<div class="well well-sm" style="background-color: #fcf8e3; border: 1px solid #faebcc; font-size: 12px; line-height: 1.4; padding: 10px; margin-bottom: 10px;">
+												<div id="btext" style="color: #8a6d3b;"></div>
+												<div id="bnote" style="margin-top: 8px; font-weight: bold;"></div>
+											</div>
+										</div>
+
+										<!-- Bad Lines Táblázat konténer -->
+										<div id="btrs" :class="{ 'recalculating-overlay': isRunning }"></div>
+									</div>
+
+									<!-- 2. FÜL: Energies -->
+									<div v-show="activeTab === 'energies'">
+										<div id="eltext"></div>
+										<!-- Energies Táblázat konténer -->
+										<div id="els" :class="{ 'recalculating-overlay': isRunning }"></div>
+									</div>
+
+									<!-- 3. FÜL: Components (ÚJ) -->
+									<div v-show="activeTab === 'components'">
+										<div id="componentsContainer" :class="{ 'recalculating-overlay': isRunning }"></div>
+									</div>
+
+								</div> <!-- /.tab-content -->
+
+							</div> <!-- /.panel-body -->
+						</div> <!-- /.panel (Results) -->
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+  if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then((reg) => {
+          console.log('Service Worker sikeresen regisztrálva:', reg);
+        })
+        .catch((err) => {
+          console.error('Service Worker regisztrációs hiba:', err);
+        });
+    });
+  }
+</script>
+</body>
+</html>

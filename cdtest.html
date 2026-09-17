@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="MARVEL ONLINE 2.0">
+    <meta name="author" content="furtibu">
+    <title>MARVEL ONLINE 2.1</title>
+
+    <!-- Helyi Bootstrap CSS -->
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+
+    <style>
+        #minput, #accordion2, #badeners, #handlingerrors, #downloadsec, #energies, #transitions, #result {
+            display: none;
+        }
+        .dontshow {
+            display: none;
+        }
+        .mtop20 {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+    <!-- Navigáció -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">MARVEL ONLINE 2.1</a>
+        </div>
+    </nav>
+
+    <!-- Fő tartalom -->
+    <div class="container-fluid px-4">
+        <div class="row g-4">
+            
+            <!-- Input Panel -->
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h4 class="card-title mb-3">Combination Differences</h4>
+                        
+                        <div class="mb-3">
+                            <label for="quantum" class="form-label"><strong>NQN</strong>: Number of quantum numbers representing an energy level:</label>
+                            <input type="number" class="form-control" id="quantum" style="width: 200px;">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Select your MARVEL <strong>energy file</strong>:</label>
+                            <input type="file" class="form-control ener" accept="text/plain">
+                        </div>
+
+                        <div class="mb-3" id="file-container">
+                            <label class="form-label">Select your MARVEL <strong>transitions file</strong>:</label>
+                            <input type="file" name="trans[]" class="form-control multifile mb-2" accept="text/plain">
+                        </div>
+
+                        <button type="button" class="btn btn-outline-secondary btn-sm mb-3" id="morefile">+ Add more transition file</button>
+
+                        <div>
+                            <button type="button" id="runCD" class="btn btn-primary">Run CD Test</button>
+                        </div>
+
+                        <span id="readI"></span>
+                        <span id="energies"></span>
+                        <span id="transitions"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Download Panel -->
+            <div class="col-md-6 dontshow">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h3 class="card-title text-primary h4" id="restext">Download new transitions:</h3>
+                        <div id="downfile"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Panel -->
+            <div class="col-md-6 dontshow">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h3 class="card-title text-primary h4">Results:</h3>
+                        <div id="result" class="table-responsive"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Details Panel -->
+            <div class="col-md-6 dontshow">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h3 class="card-title text-primary h4">Details:</h3>
+                        <div id="detail"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /row -->
+
+        <footer class="pt-4 my-md-5 pt-md-5 border-top">
+            <p class="text-muted">MARVEL ONLINE 2.0 2018</p>
+        </footer>
+    </div><!-- /container -->
+
+    <!-- JS Fájlok -->
+    <script src="js/jquery-3.7.1.min.js"></script>
+    <script src="js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        var enersMap = new Map();
+        var upperEnerMap = new Map();
+        var transMap = new Map();
+        var nbtranfile = 0;
+        var fileindex = 0;
+        var nqn = 0;
+        var nbzerolines = 0;
+        var filenames = [];
+
+        function SaveJSON() {
+            if( supports_html5_storage() ){
+                var data = document.getElementById("output").innerText;
+                localStorage.setItem('transitions', JSON.stringify(data));
+                
+                var data2 = document.getElementById("quantum").value;
+                localStorage.setItem('nqnumber', JSON.stringify(data2));
+                
+                window.location = "graph.html"
+            }
+        }
+        
+        function supports_html5_storage() {
+          try {
+            return 'localStorage' in window && window['localStorage'] !== null;
+          } catch(e){
+            return false;
+          }
+        }
+
+        function isNumeric(n) {
+          return !isNaN(parseFloat(n)) && isFinite(n);
+        }
+
+        function transition(freq, unc, upper, lower, ref, comment, filename) {
+            this.freq = freq;
+            this.unc = unc;
+            this.upper = upper;
+            this.lower = lower;
+            this.ref = ref;
+            this.comment = comment;
+            this.filename = filename;
+        }
+
+        function upperState(){
+            this.trans = [];
+            this.unc = [];
+            this.lowerstates = [];
+            this.lowerEners = [];
+            this.refs = [];
+            this.avg = 0.0;
+            this.sd = 0.0;
+            this.predEners = [];
+            this.nbWO = 0;
+            
+            this.addLine = function(freq, unc, lower, lowerE, ref) {
+                this.trans.push(freq);
+                this.unc.push(unc);
+                this.lowerstates.push(lower);
+                this.lowerEners.push(lowerE);
+                this.refs.push(ref);
+            }
+            
+            this.calcAvg = function() {
+                this.avg = 0.0;
+                var sumwi = 0.0;
+                var sumwixi = 0.0;
+                
+                if(this.trans.length > 1) {
+                    for(var i = 0; i < this.trans.length; i++) {
+                        var predEners = this.trans[i] + this.lowerEners[i];
+                        this.predEners.push(predEners);
+                        sumwixi += (predEners * (1.0/this.unc[i]));
+                        sumwi += (1.0/this.unc[i]);
+                    }
+                    this.avg = sumwixi / sumwi;
+                } else {
+                    this.avg = this.trans[0];
+                    this.predEners.push(this.trans[0]);
+                }
+            }
+            
+            this.calcStDev = function() {
+                this.sd = 0.0;
+                var nosqrt = 0.0;
+                if(this.trans.length > 1) {
+                    for(var i = 0; i < this.trans.length; i++) {
+                        this.sd += ((this.predEners[i] - this.avg)*(this.predEners[i] - this.avg));
+                    }
+                    nosqrt = this.sd/(this.trans.length - 1);
+                    this.sd = Math.sqrt(nosqrt);
+                    
+                    for(var i = 0; i < this.trans.length; i++) {
+                        if(Math.abs((this.predEners[i] - this.avg)) > 3.0*this.sd)
+                            this.nbWO++;
+                    }
+                }
+            }
+        }
+
+        $(document).on('click','#delline',function(){
+            var acttran = transMap.get($(this).attr("data"));
+            if(acttran.freq > 0.0)
+                acttran.freq *= -1.0;
+            $(this).remove();
+        });
+
+        function download(filename, text) {
+            var element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+            element.setAttribute('download', filename);
+            element.style.display = 'none';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+        }
+
+        $(document).on('click','.downonetrans',function(){
+            var fname = $(this).attr("filename");
+            var noext = fname.split('.').slice(0, -1).join('.');
+            var text = "";
+            
+            for (var [key, value] of transMap.entries()) {
+                if(fname == value.filename)
+                    text+= value.freq+" "+value.unc+" "+value.upper+" "+value.lower+" "+value.ref+" "+value.comment+"\n";
+            }
+            
+            var d = new Date();
+            var filename = noext+"_"+d.getDate() + "_" + (d.getMonth()+1) + "_" + d.getFullYear() + "_" +d.getHours() + "_" + d.getMinutes()+".txt";
+            download(filename, text);
+        });
+
+        $(document).on('click','#downtrans',function(){
+            var text = "";
+            var upplabels, lowlabels;
+            for (var [key, value] of transMap.entries()) {
+                upplabels = value.upper.replace("&apos;","'");
+                lowlabels = value.lower.replace("&apos;","'");
+                text+= value.freq+" "+value.unc+" "+upplabels+" "+lowlabels+" "+value.ref+" "+value.comment+"\n";
+            }
+            
+            var d = new Date();
+            var filename = "transitions_"+d.getDate() + "_" + (d.getMonth()+1) + "_" + d.getFullYear() + "_" +d.getHours() + "_" + d.getMinutes()+".txt";
+            download(filename, text);
+        });
+
+        $(document).on('click','#showdet',function(){
+            var label = $(this).attr("data").replace(/'/g,"&apos;");
+            var actener = upperEnerMap.get(label);
+            var dettext ="";
+            var diff = 0.0;
+            
+            dettext = "<h3>"+$(this).attr("data")+"</h3>";
+            dettext += "<strong>AVG. Energy: "+actener.avg.toFixed(6)+"</strong><br/>";
+            dettext +="<table class='table table-hover mt-2'>";
+            dettext +=" <thead><tr><th>pred Eners</th><th>Diff from avg</th><th>Line</th><th>Delete</th></tr></thead><tbody>";
+            for(var i = 0; i < actener.trans.length; i++) {
+                diff = actener.predEners[i] - actener.avg;
+                dettext +="<tr><td>"+actener.predEners[i].toFixed(6)+"</td><td>"+diff.toFixed(6)+"</td><td>"+actener.refs[i]+"</td><td><button type='button' data='"+actener.refs[i]+"' id='delline' class='btn btn-danger btn-sm'>Delete</button></td></tr>";
+            }
+            dettext +="</tbody></table>";
+            $("#detail").html(dettext);
+        });
+
+        $(document).on('click','#done',function(){
+            $(this).parent().parent().remove();
+        });
+
+        $("#morefile").click(function() {
+            var text ='<div class="mb-2"><label class="form-label">Select your MARVEL <strong>transition file</strong></label><input name="trans[]" class="form-control multifile" type="file"/></div>';
+            $(this).before(text);
+        });
+
+        function ReaderEnerFile(file) {
+            var reader = new FileReader(); 
+            reader.readAsText(file);
+            reader.onload = function() {  
+                var file_str = reader.result;
+                var enerArr = file_str.split("\n");
+                var labelsArr;
+                var labels = "";
+                
+                for(var i = 0; i < enerArr.length; i++) {
+                    enerArr[i] = enerArr[i].trim();
+                    if(!enerArr[i]) continue;
+                    labelsArr = enerArr[i].split(/\s+/g);
+                    labels = "";
+                    
+                    for(var j = 0; j < nqn; j++) {
+                        labels += labelsArr[j]+" ";
+                    }
+                    enersMap.set(labels, parseFloat(labelsArr[nqn])); 
+                }
+            }
+        }
+
+        function ReaderTranFile(file, callback) {
+            var name = file.name;
+            filenames.push(name);
+            var reader = new FileReader(); 
+            reader.readAsText(file);
+            reader.onload = function() {  
+                var file_str = reader.result;
+                var tranArr = file_str.split("\n");
+                var upplabels = "";
+                var lowlabels = "";
+                var freq = 0.0;
+                var unc = 0.0;
+                var ref = "";
+                var lowerEnerValue = 0.0;
+                var comment = "";
+                nbzerolines = 0;
+                var wronglinetext = "";
+                
+                for(var i = 0; i < tranArr.length; i++) {
+                    tranArr[i] = tranArr[i].trim();
+                    if(!tranArr[i]) continue;
+                    var labelsArr = tranArr[i].split(/\s+/g);
+                    
+                    freq = parseFloat(labelsArr[0]);
+                    if(isNumeric(freq) == false) continue;
+                    
+                    unc = parseFloat(labelsArr[1]);
+                    
+                    upplabels = "";
+                    for(var j = 0; j < nqn; j++) {
+                        upplabels += labelsArr[2+j]+" ";
+                    }
+                    upplabels = upplabels.replace(/'/g,"&apos;");
+                    
+                    lowlabels = "";
+                    for(var j = 0; j < nqn; j++) {
+                        lowlabels += labelsArr[nqn+2+j]+" ";
+                    }
+                    lowlabels = lowlabels.replace(/'/g,"&apos;");
+                
+                    ref = labelsArr[2*nqn+2];
+                    
+                    if(unc == 0.0 || unc < 0.0) {
+                        wronglinetext +="Wrong uncertainty in line "+ref+" in file: "+name+"<br/>";
+                        nbzerolines=1;
+                    }
+                    comment = "";
+                    if(labelsArr.length > (2*nqn+3)) {
+                        for(var j = 2*nqn+3; j < labelsArr.length; j++)
+                            comment += labelsArr[j]+" ";
+                    }
+                    
+                    var tr = new transition(freq, unc, upplabels, lowlabels, ref, comment, name);
+                    transMap.set(ref, tr);
+                    
+                    if(freq > 0.0) {
+                        if(upperEnerMap.has(upplabels)) {
+                            if(enersMap.has(lowlabels)) {
+                                lowerEnerValue = enersMap.get(lowlabels);
+                                upperEnerMap.get(upplabels).addLine(freq, unc, lowlabels, lowerEnerValue, ref);
+                            }
+                        } else {
+                            if(enersMap.has(lowlabels)) {
+                                lowerEnerValue = enersMap.get(lowlabels);
+                                var upstate = new upperState();
+                                upstate.addLine(freq, unc, lowlabels, lowerEnerValue, ref);
+                                upperEnerMap.set(upplabels, upstate);
+                            }
+                        }
+                    }
+                }
+                
+                fileindex++;
+                
+                if(nbzerolines == 0) callback();
+                if(nbzerolines == 1) {
+                    $("#runCD").after("<div class='alert alert-danger mt-3' role='alert'>WARNING! "+wronglinetext+" Please fix the problem(s), reload the page and try again.</div>");
+                }
+            }    
+        }
+
+        function checkfiles() {
+            if(fileindex < nbtranfile) {
+                ReaderTranFile($( ".multifile:eq("+fileindex+")" )[0].files[0], checkfiles);
+            } else {
+                $("#result").html("");
+                
+                var table=" <table id='example' class='table table-striped mt-2' style='width: 100%;'>";
+                table +="<thead> <tr> <th>Labels</th><th>Avg. Energy</th><th>St. Dev.</th><th>NbTr</th><th>Details</th><th>Done</th></tr></thead>";
+                table +="<tbody>";
+                
+                for (var [key, value] of upperEnerMap) {
+                    value.calcAvg();
+                    value.calcStDev();
+                    table+="<tr><td>"+key+"</td><td>"+value.avg.toFixed(6)+"</td><td>"+value.sd.toFixed(6)+"</td><td>"+value.trans.length+"</td><td><button type='button' data='"+key+"' id='showdet' class='btn btn-primary btn-sm'>Details</button></td><td><button type='button' id='done' class='btn btn-success btn-sm'>Done</button></td></tr>";
+                }
+                table +="</tbody></table>";
+                
+                $("#result").append(table);
+                $("#result").show();
+                
+                $("#downfile").html("");
+                
+                if(filenames.length > 1) {
+                    var atext="<h5>Download transitions files one by one:</h5>";
+                    for(var i = 0; i < filenames.length; i++) {
+                        atext += "<p><button type='button' filename='"+filenames[i]+"' class='btn btn-info btn-sm downonetrans'>"+filenames[i]+"</button></p>";
+                    }
+                    $("#downfile").append(atext);
+                }
+                $("#downfile").append("<h5>Download all transitions in one file:</h5><button type='button' id='downtrans' class='btn btn-info'>Download Transitions</button>");
+                $(".dontshow").show();
+            }
+        }
+
+        $("#runCD").click(function() {
+            nqn = parseInt($( "#quantum" ).val());
+            
+            $(".ener").each(function(index) {
+                if($(this)[0].files[0]) {
+                    ReaderEnerFile($(this)[0].files[0]);
+                }
+            });
+            
+            nbtranfile = $(".multifile").length;
+            
+            if($(".multifile:eq(0)")[0].files[0]) {
+                ReaderTranFile($(".multifile:eq(0)")[0].files[0], checkfiles);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,3 +1,9 @@
+The online version of MARVEL 4.5 is available at: https://furted.github.io/MARVEL/
+
+
+The online CD check is available at:
+https://furted.github.io/CD/
+
 # MARVEL Offline (v4.5)
 
 This repository contains the fully offline-capable web application of MARVEL, allowing users to run MARVEL calculations directly in their browser without any internet connection, local server, or installation.
